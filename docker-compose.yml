@@ -38,3 +38,38 @@ services:
       retries: 3
     networks:
       - OST2-network
+      
+  spark:
+    image: 'bitnami/spark:3'
+    ports:
+      - "4040:4040"
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTH_SECRET=mysecret
+    depends_on:
+      - kafka
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - OST2-network
+
+  influxdb:
+    image: 'influxdb:latest'
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=mydb
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin123
+      - INFLUXDB_USER=user
+      - INFLUXDB_USER_PASSWORD=user123
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - OST2-network
