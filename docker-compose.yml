@@ -1,199 +1,136 @@
-version: '3.8'
-
-networks:
-  OST2-network:
-    driver: bridge
+version: '3.5'
 
 services:
+
   zookeeper:
-      image: confluentinc/cp-zookeeper:7.4.0
-      hostname: zookeeper
-      container_name: zookeeper
-      ports:
-        - "2181:2181"
-      environment:
-        ZOOKEEPER_CLIENT_PORT: 2181
-        ZOOKEEPER_TICK_TIME: 2000
-      healthcheck:
-        test: ['CMD', 'bash', '-c', "echo 'ruok' | nc localhost 2181"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
-      networks:
-        - OST2-network
-
-  broker:
-    image: confluentinc/cp-server:7.4.0
-    hostname: broker
-    container_name: broker
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    ports:
-      - "9092:9092"
-      - "9101:9101"
+    image: confluentinc/cp-zookeeper:6.2.0
     environment:
+      - ZOOKEEPER_CLIENT_PORT=32181
+    ports:
+      - 32181:32181
+    networks:
+      - anomaly_detection
+
+  kafka:
+    image: confluentinc/cp-kafka:6.2.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    networks:
+      - anomaly_detection
+    ports:
+      - 9092:9092
+      - 30001:30001
+    environment:
+      KAFKA_CREATE_TOPICS: swat
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_JMX_PORT: 9101
-      KAFKA_JMX_HOSTNAME: localhost
-      KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092
-      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
-      CONFLUENT_METRICS_ENABLE: 'false'
-      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
-    networks:
-      - OST2-network
-    healthcheck:
-      test: [ "CMD", "bash", "-c", 'nc -z localhost 9092' ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 100 
 
-  schema-registry:
-    image: confluentinc/cp-schema-registry:7.4.0
-    hostname: schema-registry
-    container_name: schema-registry
-    depends_on:
-      broker:
-        condition: service_healthy
+  kafka_manager:
+    image: hlebalbau/kafka-manager:stable
     ports:
-      - "8081:8081"
+      - "9000:9000"
     environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      ZK_HOSTS: "zookeeper:32181"
+      APPLICATION_SECRET: "random-secret"
     networks:
-      - OST2-network
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8081/" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-  control-center:
-    image: confluentinc/cp-enterprise-control-center:7.4.0
-    hostname: control-center
-    container_name: control-center
-    depends_on:
-      broker:
-        condition: service_healthy
-      schema-registry:
-        condition: service_healthy
+      - anomaly_detection
+      
+  pyspark:
+    container_name: pyspark
+    image: docker.io/bitnami/spark:3
+    hostname: spark
+    build: ./spark
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
     ports:
-      - "9021:9021"
-    environment:
-      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:29092'
-      CONTROL_CENTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
-      CONTROL_CENTER_REPLICATION_FACTOR: 1
-      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
-      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
-      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
-      CONFLIENT_METRICS_ENABLE: 'false'
-      PORT: 9021
+        - 8080:8080
     networks:
-      - OST2-network
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9021/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+        - anomaly_detection
+    volumes:
+        - ./spark:/sparkScripts:rw
+
   
-  spark-master:
-    image: bitnami/spark:latest
-    command: bin/spark-class org.apache.spark.deploy.master.Master
-    ports:
-      - "9090:8080"
-      - "7077:7077"
-    networks:
-      - OST2-network
-    volumes:
-      - ./spark:/sparkScripts:rw
-
-  spark-worker:
-    image: bitnami/spark:latest
-    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-    depends_on:
-      - spark-master
-    environment:
-      SPARK_MODE: worker
-      SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 1g
-      SPARK_MASTER_URL: spark://spark-master:7077
-    networks:
-      - OST2-network
-    volumes:
-      - ./spark:/sparkScripts:rw
-
   influxdb:
-    image: 'influxdb:latest'
+    container_name: influxdb
+    image: influxdb:2.4.0-alpine
+    restart: always
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
     ports:
-      - "8086:8086"
+      - 8086:8086
     environment:
-      - INFLUXDB_DB=mydb
-      - INFLUXDB_ADMIN_USER=admin
-      - INFLUXDB_ADMIN_PASSWORD=admin123
-      - INFLUXDB_USER=user
-      - INFLUXDB_USER_PASSWORD=user123
-    healthcheck:
-      test: ["CMD", "influx", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      - INFLUXDB_DB=${INFLUXDB_DB}
+      - INFLUXDB_USER_BUCKET=${BUCKET}
+      - INFLUXDB_ADMIN_USER=${ADMIN_USERNAME}
+      - INFLUXDB_ADMIN_USER_PASSWORD=${ADMIN_PASSWORD}
+      - INFLUXDB_ADMIN_USER_TOKEN=${AUTH_TOKEN}
     networks:
-      - OST2-network
-    
+      - power-consumption-network
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana-oss:9.1.8
+    ports:
+      - 3000:3000
+    restart: always
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+    depends_on:
+      - influxdb
+    networks:
+      - power-consumption-network
+
   telegraf:
-    image: 'telegraf:latest'
+    container_name: telegraf
+    image: telegraf:latest
+    restart: always
     volumes:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     depends_on:
       - influxdb
-    healthcheck:
-      test: ["CMD", "telegraf", "config", "-test"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+    links:
+      - influxdb
+    ports:
+      - 8125:8125
     networks:
-      - OST2-network
+      - power-consumption-network
 
   chronograf:
-    image: 'chronograf:latest'
+    image: chronograf:latest
+    container_name: chronograf
     ports:
-      - "8888:8888"
-    environment:
-      - INFLUXDB_URL=http://influxdb:8086
+      - 127.0.0.1:8888:8888
+    volumes:
+      - chronograf-storage:/var/lib/chronograf
     depends_on:
       - influxdb
-    healthcheck:
-      test: ["CMD", "chronograf", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+    environment:
+      - INFLUXDB_URL=${INFLUXDB_HOST}
+      - INFLUXDB_USERNAME={INFLUXDB_ADMIN_USER}
+      - INFLUXDB_PASSWORD={ADMIN_PASSWORD}
     networks:
-      - OST2-network
+      - power-consumption-network
 
-  grafana:
-    image: 'grafana/grafana:latest'
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    depends_on:
-      - influxdb
-    healthcheck:
-      test: ["CMD", "grafana-cli", "admin", "reset-admin-password", "admin"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    networks:
-      - OST2-network
-      
+networks:
+  anomaly_detection:
+    driver: bridge
+
+volumes:
+  grafana-data:
+  chronograf-storage:
+  influxdb-data:
