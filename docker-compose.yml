@@ -76,7 +76,7 @@ services:
       - INFLUXDB_ADMIN_USER_PASSWORD=${ADMIN_PASSWORD}
       - INFLUXDB_ADMIN_USER_TOKEN=${AUTH_TOKEN}
     networks:
-      - power-consumption-network
+      - anomaly_detection
 
   grafana:
     container_name: grafana
@@ -93,7 +93,7 @@ services:
     depends_on:
       - influxdb
     networks:
-      - power-consumption-network
+      - anomaly_detection
 
   telegraf:
     container_name: telegraf
@@ -108,7 +108,7 @@ services:
     ports:
       - 8125:8125
     networks:
-      - power-consumption-network
+      - anomaly_detection
 
   chronograf:
     image: chronograf:latest
@@ -124,7 +124,7 @@ services:
       - INFLUXDB_USERNAME={INFLUXDB_ADMIN_USER}
       - INFLUXDB_PASSWORD={ADMIN_PASSWORD}
     networks:
-      - power-consumption-network
+      - anomaly_detection
 
 networks:
   anomaly_detection:
