@@ -1,32 +1,10 @@
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
-from pyspark.sql.types import *
 import json
 import os
 import pyspark
-
-# Specify Kafka dependencies
-spark = SparkSession.builder \
-            .appName('OST2') \
-            .config('spark.jars.packages', 'org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0') \
-            .getOrCreate()
-
-
-# Kafka configuration
-kafka_config = {
-    'kafka.bootstrap.servers': 'localhost:29092',  
-    'subscribe': 'swat'
-}
-
-
-df = spark \
-    .readStream \
-    .format("kafka") \
-    .option("kafka.bootstrap.servers", kafka_config['kafka.bootstrap.servers']) \
-    .option("subscribe", kafka_config['subscribe']) \
-    .load()
-
-
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+ 
 schema = StructType([
     StructField("Timestamp", StringType(), True),
     StructField("FIT101", StringType(), True),
@@ -82,7 +60,20 @@ schema = StructType([
     StructField("P603", StringType(), True),
     StructField("Normal/Attack", StringType(), True)
 ])
-
+# Create a SparkSession
+#spark = SparkSession.builder.appName("KafkaPreprocessing").getOrCreate()
+ 
+spark = SparkSession.builder.master('local').getOrCreate()
+    #spark.sparkContext.setLogLevel('ERROR')
+df = spark \
+        .readStream \
+        .format("kafka") \
+        .option("kafka.bootstrap.servers", "kafka:29092") \
+        .option("subscribe", "swat") \
+        .option("startingOffsets", "earliest") \
+        .load()
+   
+ 
 # Convert value column from binary to string
 df = df.withColumn("value", df["value"].cast(StringType()))
  
