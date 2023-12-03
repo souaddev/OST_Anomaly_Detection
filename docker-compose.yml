@@ -60,7 +60,6 @@ services:
     volumes:
         - ./spark:/sparkScripts:rw
 
-  
   influxdb:
     container_name: influxdb
     image: influxdb:2.4.0-alpine
@@ -125,7 +124,7 @@ services:
       - INFLUXDB_PASSWORD={ADMIN_PASSWORD}
     networks:
       - anomaly_detection
-
+    
 networks:
   anomaly_detection:
     driver: bridge
@@ -134,3 +133,14 @@ volumes:
   grafana-data:
   chronograf-storage:
   influxdb-data:
+ 
+
+
+
+
+
+
+
+
+
+
