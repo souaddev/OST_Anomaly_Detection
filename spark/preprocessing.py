@@ -79,7 +79,8 @@ df = df.withColumn("value", df["value"].cast(StringType()))
 
 # Apply from_json on the string value column using your schema
 df = df.withColumn("data", from_json(col("value"), schema)).select("data.*")
-
+# Drop duplicates and missing values
+df = df.dropDuplicates().na.drop()
 df.printSchema()
  
 query = df.writeStream.outputMode("append").format("console") \
