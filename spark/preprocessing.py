@@ -73,6 +73,8 @@ df = spark \
         .option("startingOffsets", "earliest") \
         .load()
    
+ # Convert value column from binary to string
+df = df.withColumn("value", df["value"].cast(StringType()))
  
 
 # Apply from_json on the string value column using your schema
