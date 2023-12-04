@@ -79,12 +79,7 @@ df = df.withColumn("value", df["value"].cast(StringType()))
  
 # Apply from_json on the string value column using your schema
 df = df.withColumn("data", from_json(col("value"), schema)).select("data.*")
-# Drop duplicates and missing values
-df = df.dropDuplicates().na.drop()
-# Convert "Normal/Attack" column to binary
-df = df.withColumn("Normal/Attack", when(df["Normal/Attack"] == "Attack", 1).otherwise(0))
- 
- 
+
 df.printSchema()
  
 query = df.writeStream.outputMode("append").format("console") \
