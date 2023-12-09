@@ -9,6 +9,7 @@ import cassandra
 from cassandra.cluster import Cluster
 #from cassandra.auth import PlainTextAuthProvider
 
+
 def create_cassandra_connection():
     try:
         # connecting to the cassandra cluster
@@ -20,6 +21,7 @@ def create_cassandra_connection():
     except Exception as e:
         logging.error(f"Could not create cassandra connection due to {e}")
         return None
+
 def create_keyspace(session):
     session.execute("""
         CREATE KEYSPACE IF NOT EXISTS swat_spark_streams
@@ -27,6 +29,7 @@ def create_keyspace(session):
     """)
 
     print("Keyspace created successfully!")
+
 
 def create_table(session):
     session.execute("""
@@ -87,6 +90,7 @@ def create_table(session):
     """)
 
     print("Table created successfully!")
+
 def insert_data(session, **kwargs):
     print("inserting data...")
 
@@ -175,15 +179,20 @@ def insert_into_cassandra(spark_df):
 
 
 
-
 def create_spark_connection():
     s_conn = None
 
     try:
+        #.config('spark.jars.packages', "com.datastax.spark:spark-cassandra-connector_2.12:3.3.0,"
+            #                               "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0") \
         s_conn = SparkSession.builder \
             .master('local') \
+            .config('spark.jars.packages', "com.datastax.spark:spark-cassandra-connector_2.12:3.3.0,"
+                                           "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0") \
+            .config('spark.cassandra.connection.host', 'localhost') \
             .getOrCreate()
         s_conn.conf.set("spark.kafka.consumer.max.poll.interval.ms", "300000")  # Adjust the value as needed
+        s_conn.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")
 
         s_conn.sparkContext.setLogLevel("ERROR")
         logging.info("Spark connection created successfully!")
@@ -195,11 +204,12 @@ def create_spark_connection():
 
 def connect_to_kafka(spark):
     spark_df = None
+    #if you wanna run it in the container please change the address to kafka:29092
     try:
         spark_df = spark \
             .readStream \
             .format("kafka") \
-            .option("kafka.bootstrap.servers", "kafka:29092") \
+            .option("kafka.bootstrap.servers", "localhost:9092") \
             .option("subscribe", "swat") \
             .option("startingOffsets", "earliest") \
             .option("maxOffsetsPerTrigger", 50) \
@@ -275,20 +285,98 @@ def create_selection_df_from_kafka(spark_df):
 
     return sel
 
-# Define foreachBatch function
+
+def schema_mapping(spark_df):
+    schema_mapping = {
+        "timestamp": "Timestamp",
+        "fit101": "double",
+        "lit101": "double",
+        "mv101": "double",
+        "p101": "double",
+        "p102": "double",
+        "ait201": "double",
+        "ait202": "double",
+        "ait203": "double",
+        "fit201": "double",
+        "mv201": "double",
+        "p201": "double",
+        "p202": "double",
+        "p203": "double",
+        "p204": "double",
+        "p205": "double",
+        "p206": "double",
+        "dpit301": "double",
+        "fit301": "double",
+        "lit301": "double",
+        "mv301": "double",
+        "mv302": "double",
+        "mv303": "double",
+        "mv304": "double",
+        "p301": "double",
+        "p302": "double",
+        "ait401": "double",
+        "ait402": "double",
+        "fit401": "double",
+        "lit401": "double",
+        "p401": "double",
+        "p402": "double",
+        "p403": "double",
+        "p404": "double",
+        "uv401": "double",
+        "ait501": "double",
+        "ait502": "double",
+        "ait503": "double",
+        "ait504": "double",
+        "fit501": "double",
+        "fit502": "double",
+        "fit503": "double",
+        "fit504": "double",
+        "p501": "double",
+        "p502": "double",
+        "pit501": "double",
+        "pit502": "double",
+        "pit503": "double",
+        "fit601": "double",
+        "p601": "double",
+        "p602": "double",
+        "p603": "double",
+        "normal_attack": "double"
+    }
+    
+    for col_name, col_type in schema_mapping.items():
+        # Replace null values with a default value (you can adjust this as needed)
+        default_value = 0.0  # You can change this to a different default value if needed
+        spark_df = spark_df.withColumn(col_name, col(col_name).cast(col_type).coalesce(default_value))
+    
+    return spark_df
+
+
+def to_lower(spark_df):
+    columns_lower = [col(col_name).alias(col_name.lower()) for col_name in spark_df.columns]
+    return spark_df.select(*columns_lower)
+
+
+
+# Define a simple foreachBatch function
 def process_batch(spark_df, epoch_id):
 
     # Drop duplicates and missing values
     spark_df = spark_df.dropDuplicates().na.drop()
 
     # Convert "Normal/Attack/A ttack" column to binary
-    spark_df = spark_df.withColumn("Normal/Attack", when((spark_df["Normal/Attack"] == "Attack") | (spark_df["Normal/Attack"] == "A ttack") , 1).otherwise(0))
+    spark_df = spark_df.withColumn("normal_attack", when((spark_df["normal_attack"] == "Attack") | (spark_df["normal_attack"] == "A ttack") , 1).otherwise(0))
 
     # Convert Timestamp to TimestampType
     # spark_df = spark_df.withColumn("Timestamp", unix_timestamp(col("Timestamp"), "dd/MM/yyyy h:mm:ss a").cast(TimestampType())) 
+    spark_df = spark_df.withColumn('Timestamp', to_timestamp('Timestamp', ' dd/MM/yyyy hh:mm:ss a'))
+
+    # Insert into Cassandra using the separate function
+    spark_df = to_lower(spark_df)
+    insert_into_cassandra(spark_df)
+
     spark_df.show()
 
-
+# spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0 /sparkScripts/spark_streaming_001.py
 if __name__ == "__main__":
     # create spark connection
     spark_conn = create_spark_connection()
@@ -299,15 +387,25 @@ if __name__ == "__main__":
         if df is None: 
             print("df is none")
         selection_df = create_selection_df_from_kafka(df)
-       
+        session = create_cassandra_connection()
+
+        if session is not None:
+            create_keyspace(session)
+            create_table(session)
 
         logging.info("Streaming is being started...")
-
+        selection_df = selection_df.withColumnRenamed("Normal/Attack", "normal_attack")
+        #selection_df = schema_mapping(selection_df)
         selection_df.printSchema()
- 
+        
         query = selection_df.writeStream.outputMode("append").format("console") \
                             .trigger(processingTime='30 seconds') \
                             .foreachBatch(process_batch) \
                             .start()
  
         query.awaitTermination()
+
+
+#spark-submit --packages com.datastax.spark:spark-cassandra-connector_2.12:3.3.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0 /sparkScripts/spark_streaming_001.py
+# docker exec -it cassandra cqlsh -u cassandra -p cassandra localhost 9042
+
