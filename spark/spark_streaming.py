@@ -87,6 +87,92 @@ def create_table(session):
     """)
 
     print("Table created successfully!")
+def insert_data(session, **kwargs):
+    print("inserting data...")
+
+    Timestamp = kwargs.get('Timestamp')
+    FIT101 = kwargs.get('FIT101')
+    LIT101 = kwargs.get('LIT101')
+    MV101 = kwargs.get('MV101')
+    P101 = kwargs.get('P101')
+    P102 = kwargs.get('P102')
+    AIT201 = kwargs.get('AIT201')
+    AIT202 = kwargs.get('AIT202')
+    AIT203 = kwargs.get('AIT203')
+    FIT201 = kwargs.get('FIT201')
+    MV201 = kwargs.get('MV201')
+    P201 = kwargs.get('P201')
+    P202 = kwargs.get('P202')
+    P203 = kwargs.get('P203')
+    P204 = kwargs.get('P204')
+    P205 = kwargs.get('P205')
+    P206 = kwargs.get('P206')
+    DPIT301 = kwargs.get('DPIT301')
+    FIT301 = kwargs.get('FIT301')
+    LIT301 = kwargs.get('LIT301')
+    MV301 = kwargs.get('MV301')
+    MV302 = kwargs.get('MV302')
+    MV303 = kwargs.get('MV303')
+    MV304 = kwargs.get('MV304')
+    P301 = kwargs.get('P301')
+    P302 = kwargs.get('P302')
+    AIT401 = kwargs.get('AIT401')
+    AIT402 = kwargs.get('AIT402')
+    FIT401 = kwargs.get('FIT401')
+    LIT401 = kwargs.get('LIT401')
+    P401 = kwargs.get('P401')
+    P402 = kwargs.get('P402')
+    P403 = kwargs.get('P403')
+    P404 = kwargs.get('P404')
+    UV401 = kwargs.get('UV401')
+    AIT501 = kwargs.get('AIT501')
+    AIT502 = kwargs.get('AIT502')
+    AIT503 = kwargs.get('AIT503')
+    AIT504 = kwargs.get('AIT504')
+    FIT501 = kwargs.get('FIT501')
+    FIT502 = kwargs.get('FIT502')
+    FIT503 = kwargs.get('FIT503')
+    FIT504 = kwargs.get('FIT504')
+    P501 = kwargs.get('P501')
+    P502 = kwargs.get('P502')
+    PIT501 = kwargs.get('PIT501')
+    PIT502 = kwargs.get('PIT502')
+    PIT503 = kwargs.get('PIT503')
+    FIT601 = kwargs.get('FIT601')
+    P601 = kwargs.get('P601')
+    P602 = kwargs.get('P602')
+    P603 = kwargs.get('P603')
+    Normal_Attack = kwargs.get('Normal_Attack')
+
+    try:
+        session.execute("""
+            INSERT INTO swat_spark_streams.processed_batch(Timestamp, FIT101, LIT101, MV101, P101, P102, AIT201, AIT202, AIT203,
+                FIT201, MV201, P201, P202, P203, P204, P205, P206, DPIT301, FIT301, LIT301, MV301, MV302, MV303, MV304, P301, P302,
+                AIT401, AIT402, FIT401, LIT401, P401, P402, P403, P404, UV401, AIT501, AIT502, AIT503, AIT504, FIT501, FIT502, FIT503,
+                FIT504, P501, P502, PIT501, PIT502, PIT503, FIT601, P601, P602, P603, Normal_Attack)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (Timestamp, FIT101, LIT101, MV101, P101, P102, AIT201, AIT202, AIT203, FIT201, MV201, P201, P202, P203, P204, P205, P206,
+              DPIT301, FIT301, LIT301, MV301, MV302, MV303, MV304, P301, P302, AIT401, AIT402, FIT401, LIT401, P401, P402, P403, P404,
+              UV401, AIT501, AIT502, AIT503, AIT504, FIT501, FIT502, FIT503, FIT504, P501, P502, PIT501, PIT502, PIT503, FIT601, P601, P602,
+              P603, Normal_Attack))
+
+        logging.info(f"Data inserted for {Timestamp}")
+
+    except Exception as e:
+        logging.error(f'could not insert data due to {e}')
+
+# insert processed data into Cassandra.
+
+def insert_into_cassandra(spark_df):
+    # Insert into Cassandra
+    spark_df.write.format("org.apache.spark.sql.cassandra") \
+        .option('checkpointLocation', './spark/checkpoint') \
+        .option('keyspace', 'swat_spark_streams') \
+        .option('table', 'processed_batch') \
+        .mode("append") \
+        .save()
+
 
 
 
