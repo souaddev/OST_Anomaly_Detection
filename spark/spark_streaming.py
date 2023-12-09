@@ -28,6 +28,65 @@ def create_keyspace(session):
 
     print("Keyspace created successfully!")
 
+def create_table(session):
+    session.execute("""
+    CREATE TABLE IF NOT EXISTS swat_spark_streams.processed_batch (
+        Timestamp TIMESTAMP PRIMARY KEY,
+        FIT101 DOUBLE,
+        LIT101 DOUBLE,
+        MV101 DOUBLE,
+        P101 DOUBLE,
+        P102 DOUBLE,
+        AIT201 DOUBLE,
+        AIT202 DOUBLE,
+        AIT203 DOUBLE,
+        FIT201 DOUBLE,
+        MV201 DOUBLE,
+        P201 DOUBLE,
+        P202 DOUBLE,
+        P203 DOUBLE,
+        P204 DOUBLE,
+        P205 DOUBLE,
+        P206 DOUBLE,
+        DPIT301 DOUBLE,
+        FIT301 DOUBLE,
+        LIT301 DOUBLE,
+        MV301 DOUBLE,
+        MV302 DOUBLE,
+        MV303 DOUBLE,
+        MV304 DOUBLE,
+        P301 DOUBLE,
+        P302 DOUBLE,
+        AIT401 DOUBLE,
+        AIT402 DOUBLE,
+        FIT401 DOUBLE,
+        LIT401 DOUBLE,
+        P401 DOUBLE,
+        P402 DOUBLE,
+        P403 DOUBLE,
+        P404 DOUBLE,
+        UV401 DOUBLE,
+        AIT501 DOUBLE,
+        AIT502 DOUBLE,
+        AIT503 DOUBLE,
+        AIT504 DOUBLE,
+        FIT501 DOUBLE,
+        FIT502 DOUBLE,
+        FIT503 DOUBLE,
+        FIT504 DOUBLE,
+        P501 DOUBLE,
+        P502 DOUBLE,
+        PIT501 DOUBLE,
+        PIT502 DOUBLE,
+        PIT503 DOUBLE,
+        FIT601 DOUBLE,
+        P601 DOUBLE,
+        P602 DOUBLE,
+        P603 DOUBLE,
+        Normal_Attack DOUBLE);
+    """)
+
+    print("Table created successfully!")
 
 
 
