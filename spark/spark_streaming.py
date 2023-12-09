@@ -108,6 +108,19 @@ def create_selection_df_from_kafka(spark_df):
 
     return sel
 
+# Define foreachBatch function
+def process_batch(spark_df, epoch_id):
+
+    # Drop duplicates and missing values
+    spark_df = spark_df.dropDuplicates().na.drop()
+
+    # Convert "Normal/Attack/A ttack" column to binary
+    spark_df = spark_df.withColumn("Normal/Attack", when((spark_df["Normal/Attack"] == "Attack") | (spark_df["Normal/Attack"] == "A ttack") , 1).otherwise(0))
+
+    # Convert Timestamp to TimestampType
+    # spark_df = spark_df.withColumn("Timestamp", unix_timestamp(col("Timestamp"), "dd/MM/yyyy h:mm:ss a").cast(TimestampType())) 
+    spark_df.show()
+
 
 if __name__ == "__main__":
     # create spark connection
@@ -126,6 +139,8 @@ if __name__ == "__main__":
         selection_df.printSchema()
  
         query = selection_df.writeStream.outputMode("append").format("console") \
-                            .trigger(processingTime='30 seconds').start()
+                            .trigger(processingTime='30 seconds') \
+                            .foreachBatch(process_batch) \
+                            .start()
  
         query.awaitTermination()
