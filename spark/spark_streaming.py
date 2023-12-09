@@ -20,6 +20,13 @@ def create_cassandra_connection():
     except Exception as e:
         logging.error(f"Could not create cassandra connection due to {e}")
         return None
+def create_keyspace(session):
+    session.execute("""
+        CREATE KEYSPACE IF NOT EXISTS swat_spark_streams
+        WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'};
+    """)
+
+    print("Keyspace created successfully!")
 
 
 
