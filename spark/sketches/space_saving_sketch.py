@@ -168,4 +168,4 @@ if __name__ == "__main__":
         query.awaitTermination()
 
 
-#spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0 /sparkScripts/space_saving_sketch.py
+#spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0 /sparkScripts/sketches/space_saving_sketch.py
