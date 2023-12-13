@@ -2,7 +2,7 @@ import hashlib
 
 class FlajoletMartinSketch:
     def __init__(self):
-        self.bit_array = [0] * 32  # Using 32 bits for simplicity
+        self.bit_array = [0] * 32  # Using
 
     def add(self, item):
         binary_hash = bin(int(hashlib.sha256(str(item).encode('utf-8')).hexdigest(), 16))
