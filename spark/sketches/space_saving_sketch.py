@@ -5,7 +5,53 @@ import pyspark
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
-from spacesaving import SpaceSaving 
+from spacesaving import SpaceSaving
+from kafka import KafkaProducer
+import json
+from json import loads
+from csv import DictReader
+import time
+from kafka.errors import NoBrokersAvailable
+import threading
+
+
+
+def is_kafka_broker_up(bootstrap_servers):
+    try:
+        # Try to create a temporary Kafka producer with a short timeout
+        temp_producer = KafkaProducer(bootstrap_servers=bootstrap_servers, request_timeout_ms=500)
+        temp_producer.close()
+        return True
+    except NoBrokersAvailable:
+        return False
+
+def kafka_producer():
+    # Set up for Kafka Producer
+    bootstrap_servers = ['kafka:29092']
+    topicname = 'swat_space_saving_sketch'
+
+    # Check if Kafka broker is up before attempting to create the producer
+    while not is_kafka_broker_up(bootstrap_servers):
+        print("Kafka broker is not up. Waiting for 30 seconds...")
+        time.sleep(30)
+
+    producer = KafkaProducer(bootstrap_servers=bootstrap_servers)
+
+    with open('/sparkScripts/dataset/SWaT_Dataset_Attack_v0.csv', 'r') as new_obj:
+        csv_dict_reader = DictReader(new_obj)
+        index = 0
+
+        for row in csv_dict_reader:
+            producer.send(topicname, json.dumps(row).encode('utf-8'))
+            #print("Data sent successfully", row)
+
+            index += 1
+            if (index % 20) == 0:
+                time.sleep(10)
+
+def run_kafka_producer_thread():
+    kafka_producer()
+
 
 def create_spark_connection():
     s_conn = None
@@ -31,7 +77,7 @@ def connect_to_kafka(spark):
             .readStream \
             .format("kafka") \
             .option("kafka.bootstrap.servers", "kafka:29092") \
-            .option("subscribe", "swat_sketch") \
+            .option("subscribe", "swat_space_saving_sketch") \
             .option("startingOffsets", "earliest") \
             .option("maxOffsetsPerTrigger", 50) \
             .load()
@@ -39,8 +85,6 @@ def connect_to_kafka(spark):
     except Exception as e:
         logging.warning(f"kafka dataframe could not be created because: {e}")
     return spark_df
-
-
 
 def create_selection_df_from_kafka(spark_df):
 
@@ -144,6 +188,11 @@ def process_batch(spark_df, epoch_id, space_saving):
 
 
 if __name__ == "__main__":
+
+    # create a thread for the kafka_producer function
+    producer_thread = threading.Thread(target=run_kafka_producer_thread)
+    producer_thread.start()
+
     # create spark connection
     spark_conn = create_spark_connection()
 
