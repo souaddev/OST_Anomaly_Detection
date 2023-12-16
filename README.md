@@ -17,7 +17,7 @@ The project follows a structured architecture:
 
 The project leverages several open-source technologies:
 
-- **Kafka**: An open-source distributed event streaming platform crucial for efficient data pipelines and streaming analytics.
+- **Kafka**: An open-source  distributed event streaming platform crucial for efficient data pipelines and streaming analytics.
 - **PySpark**: An interface for Apache Spark in Python, supporting various Spark functionalities like Spark SQL, DataFrame, Streaming, MLlib (Machine Learning), and Spark Core.
 - **InfluxDB**: An open-source time series database by InfluxData, suitable for storing and retrieving time series data in real-time applications.
 - **Grafana**: An open-source analytics and visualization web application capable of generating charts, graphs, and alerts when connected to compatible data sources.
