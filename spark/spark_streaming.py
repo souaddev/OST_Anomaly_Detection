@@ -204,7 +204,7 @@ def create_spark_connection():
 
 def connect_to_kafka(spark):
     spark_df = None
-    #if you wanna run it in the container please change the address to kafka:29092
+    #if you wanna run it in the container please change the address to kafka:29092 / localy localhost:9092
     try:
         spark_df = spark \
             .readStream \
@@ -406,5 +406,5 @@ if __name__ == "__main__":
         query.awaitTermination()
 
 
-#spark-submit --packages com.datastax.spark:spark-cassandra-connector_2.12:3.3.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0 /sparkScripts/spark_streaming_001.py
+#spark-submit --packages com.datastax.spark:spark-cassandra-connector_2.12:3.3.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0 /sparkScripts/spark_streaming.py
 # docker exec -it cassandra cqlsh -u cassandra -p cassandra localhost 9042
