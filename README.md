@@ -66,7 +66,7 @@ To execute the project, use the following command in the terminal:
     Set up a new InfluxDB data source in both Grafana and Chronograf to visualize and analyze the results.
 
 ## Additional Notes:
-- All related scripts and sketches are located in the `spark` and `kafka` folders.
+- All related scripts and sketches are located in the `spark` folder.
 - To run Spark scripts, access the Spark Docker container and execute:
     ```sh
     spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 /sparkScripts/<sketch_name.py>
