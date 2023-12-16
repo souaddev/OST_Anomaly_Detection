@@ -8,6 +8,7 @@ import numpy as np
 import pyarrow.parquet as pq
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score, roc_curve, roc_auc_score,accuracy_score,classification_report
 from pyspark.sql import SparkSession
+from sklearn.model_selection import train_test_split
 
 # Initialize SparkSession
 spark = SparkSession.builder.appName("AutoEncoder").getOrCreate()
@@ -27,9 +28,11 @@ transformed_data_pd.drop(columns=columns_to_drop, inplace=True, errors='ignore')
 
 print('start spliting data to train and test')
 #Data Split to train and test
-train_data = transformed_data_pd.iloc[:700000, :]
-df_test = transformed_data_pd.iloc[700000:, :]
-target_test = y.iloc[700000:]
+# train_data = transformed_data_pd.iloc[:700000, :]
+# df_test = transformed_data_pd.iloc[700000:, :]
+# target_test = y.iloc[700000:]
+
+train_data,df_test,target_train, target_test = train_test_split(transformed_data_pd, y, test_size=0.3, random_state=42, shuffle=True)
 
 print('Start training the model ==>')
 
