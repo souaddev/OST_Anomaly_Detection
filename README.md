@@ -10,7 +10,7 @@ The primary objective of this project is to conduct a comparative analysis of un
 
 The project follows a structured architecture:
 
-![Architecture Diagram](https://github.com/souaddev/OST_Anomaly_Detection/blob/54743f3675c323eddb2352981722532216813344/documents/SystemArchitecture.png)
+![Architecture Diagram](https://github.com/souaddev/OST_Anomaly_Detection/blob/dcc92d689bfb527cc94242c20d63140ebc03381b/documents/SystemArchitecture.png)
 
 
 ## Technologies Used
@@ -26,3 +26,48 @@ The project leverages several open-source technologies:
 
 To execute the project, use the following command in the terminal:
 
+1. **Run Docker Compose:**
+    ```sh
+    docker-compose up 
+    ```
+
+2. **Merge SWaT Normal and Attack Datasets:**
+    Run `mergeDataset.py` to merge SWaT normal and attack datasets. This script combines these datasets for further processing.
+
+3. **Create 'swat' Topic in Kafka:**
+    Inside the `kafka` folder, execute `topic_creation.ipynb` to create the 'swat' topic within Kafka. This step is required only once initially.
+
+## Data Streaming and Processing:
+4. **Data Streaming to Kafka:**
+    Execute `kafka_producer.ipynb` in the `kafka` folder. This notebook streams data from CSV files into Kafka.
+
+5. **Preprocess Data using Spark:**
+    a. Find the Spark container ID:
+        ```sh
+        docker ps  # Copy the Spark container ID
+        ```
+    b. Access the Spark container:
+        ```sh
+        docker exec -it [spark_container_id] bash
+        ```
+    c. Preprocess data using Spark:
+        ```sh
+        spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 /sparkScripts/preprocessing.py
+        ```
+
+6. **Perform Batch Data Preprocessing:**
+    Use `batch_preprocessing.py` to preprocess data using Spark libraries.
+
+7. **Initiate Model Training on Batch Data:**
+    Commence model training by executing `<model_name>.py` scripts.
+
+## Visualization and Result Interpretation:
+8. **Configure InfluxDB Data Source in Grafana and Chronograf:**
+    Set up a new InfluxDB data source in both Grafana and Chronograf to visualize and analyze the results.
+
+## Additional Notes:
+- All related scripts and sketches are located in the `spark` and `kafka` folders.
+- To run Spark scripts, access the Spark Docker container and execute:
+    ```sh
+    spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 /sparkScripts/<sketch_name.py>
+    ```
