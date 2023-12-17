@@ -1,5 +1,5 @@
 from spark_processor import SparkDataProcessor
-from flajolet_martin2 import FlajoletMartinSketch
+from flajolet_martin import FlajoletMartinSketch
 
 # Initialize SparkDataProcessor and process the data
 data_processor = SparkDataProcessor()
