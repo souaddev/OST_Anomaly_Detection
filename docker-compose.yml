@@ -93,7 +93,6 @@ services:
 
   grafana:
     container_name: grafana
-    #image: grafana/grafana:6.6.2
     image: grafana/grafana-oss:9.1.8
     ports:
       - 3000:3000
