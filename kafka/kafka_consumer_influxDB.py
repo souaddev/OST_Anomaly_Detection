@@ -6,14 +6,14 @@ from influxdb_client.client.write_api import SYNCHRONOUS
  
 # Kafka configuration
 bootstrap_servers = 'localhost:9092'
-topic = 'swat_test2'
+topic = 'swat'
 consumerGID = 'swat_test_gid-1'
  
 # InfluxDB configuration (Dear teammate, please, replace this token with urs)
 token = "n2JFLRm9VaWepZ4zwk8YJlhR5AVEa_WIk2KCn2xhM9cMYW5s8qeMH5r0yX9wmOdyEs_Nq5Evnpwpm97sPdfP5A=="
 #token = "n2JFLRm9VaWepZ4zwk8YJlhR5AVEa_WIk2KCn2xhM9cMYW5s8qeMH5r0yX9wmOdyEs_Nq5Evnpwpm97sPdfP5A=="
 org = "dataCrew"
-bucket = "anomaly-detection"
+bucket = "anomalyDetection"
  
  
 def convert_attack_to_double(attack_value):
@@ -42,7 +42,7 @@ def process_kafka_message(message):
     timestamp_seconds = int(timestamp.timestamp())
  
     # InfluxDB point
-    point = Point("Swat-2028").field('Timestamp', timestamp_seconds)
+    point = Point("swat").field('Timestamp', timestamp_seconds)
     for key, value in data.items():
         if key != "Timestamp":
             point.field(key, float(value))
