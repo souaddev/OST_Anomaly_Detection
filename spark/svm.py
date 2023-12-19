@@ -94,7 +94,8 @@ joblib.dump(svm_model, 'svm_model.pkl')
 '''  
 
     To run this file: 
-        #spark-submit --packages /sparkScripts/svm.py
+        #spark-submit  /sparkScripts/svm.py
+        - it takes time, maybe hours... 
 
 
 '''
