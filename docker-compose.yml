@@ -83,11 +83,10 @@ services:
     ports:
       - 8086:8086
     environment:
-      - INFLUXDB_DB=${INFLUXDB_DB}
-      - INFLUXDB_USER_BUCKET=${BUCKET}
-      - INFLUXDB_ADMIN_USER=${ADMIN_USERNAME}
-      - INFLUXDB_ADMIN_USER_PASSWORD=${ADMIN_PASSWORD}
-      - INFLUXDB_ADMIN_USER_TOKEN=${AUTH_TOKEN}
+      - INFLUXDB_DB=anomalyDetection
+      - INFLUXDB_USER_BUCKET=anomalyDetection
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_USER_PASSWORD=admin123
     networks:
       - anomaly_detection
 
@@ -128,15 +127,15 @@ services:
     image: chronograf:latest
     container_name: chronograf
     ports:
-      - 127.0.0.1:18888:18888
+      - 8888:8888
     volumes:
       - chronograf-storage:/var/lib/chronograf
     depends_on:
       - influxdb
     environment:
-      - INFLUXDB_URL=${INFLUXDB_HOST}
-      - INFLUXDB_USERNAME={INFLUXDB_ADMIN_USER}
-      - INFLUXDB_PASSWORD={ADMIN_PASSWORD}
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_USERNAME=admin
+      - INFLUXDB_PASSWORD=admin123
     networks:
       - anomaly_detection
 
