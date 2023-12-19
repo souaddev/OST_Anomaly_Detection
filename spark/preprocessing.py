@@ -7,10 +7,19 @@ from pyspark.ml.feature import StringIndexer, OneHotEncoder
 from pyspark.ml import Pipeline, PipelineModel
 from pyspark.sql.functions import col, lit,row_number
 from pyspark.sql.window import Window
-
-
+from influxdb_client import InfluxDBClient, Point, WriteOptions
+from influxdb_client.client.write_api import SYNCHRONOUS
 from pyspark.ml.feature import MinMaxScaler, VectorAssembler
- 
+
+
+influxdb_url = 'http://influxdb:8086'
+token = "n2JFLRm9VaWepZ4zwk8YJlhR5AVEa_WIk2KCn2xhM9cMYW5s8qeMH5r0yX9wmOdyEs_Nq5Evnpwpm97sPdfP5A=="
+#token = "n2JFLRm9VaWepZ4zwk8YJlhR5AVEa_WIk2KCn2xhM9cMYW5s8qeMH5r0yX9wmOdyEs_Nq5Evnpwpm97sPdfP5A=="
+org = "dataCrew"
+bucket_ = "anomalyDetection"
+measurement = 'isopredictions'
+
+
 schema = StructType([
     StructField("Timestamp", StringType(), True),
     StructField("FIT101", StringType(), True),
@@ -73,7 +82,7 @@ df = spark \
         .readStream \
         .format("kafka") \
         .option("kafka.bootstrap.servers", "kafka:29092") \
-        .option("subscribe", "swat") \
+        .option("subscribe", "swat_203") \
         .option("startingOffsets", "earliest") \
         .load()
    
@@ -143,7 +152,7 @@ def predict_anomalies(df, epoch_id):
 
     batch_df = batch_df.drop('Timestamp').drop('Normal/Attack')
     print('==> Result of preprocessing > ')
-    batch_df.show(3)
+    batch_df.show(2)
 
    # Load the Isolation Forest model
     print('Loading Isolation Forest')
@@ -155,9 +164,15 @@ def predict_anomalies(df, epoch_id):
     print('This is the predictions :')
     print(predictions)
 
-    # original DataFrame+ Prediction
+    # original DataFrame + Prediction
     df_with_predictions = add_anomaly_prediction_column(df, predictions,'ISO_FOREST_prediction')
-    df_with_predictions.show()
+    print('Show only two rows...')
+    df_with_predictions.show(2)
+
+    # Send data to influxDB
+
+    send_to_influxdb(df_with_predictions, bucket_, token)
+    print('Prediction Data saved to InfluxDB successfully... !  Smile :) ')
 
 def add_anomaly_prediction_column(df, predictions, col_name='anomaly_prediction'):
      # Add a unique index to the DataFrame based on 'Timestamp'
@@ -186,6 +201,24 @@ def add_anomaly_prediction_column(df, predictions, col_name='anomaly_prediction'
 
 
 
+def send_to_influxdb(df, bucket_, token):
+    
+    # Create an InfluxDB client
+    client = InfluxDBClient(url=influxdb_url, token=token, org=org)
+
+    # Create a write API
+    write_api = client.write_api(write_options=WriteOptions(batch_size=500, flush_interval=10_000, jitter_interval=2_000, retry_interval=5_000))
+
+    # Convert DataFrame to InfluxDB Point format
+    data_points = [Point(measurement).field(col, value) for row in df.collect() for col, value in row.asDict().items() if col != 'Timestamp']
+
+    # Write data to InfluxDB
+    write_api.write(bucket=bucket_, org=org, record=data_points)
+
+    # Close the InfluxDB client
+    client.close()
+
+
 # Apply scaling and encoding using foreachBatch
 #query = df.writeStream.foreachBatch(min_max_scaling_and_encoding).outputMode("update").start()
 # Define your streaming query with trigger and foreachBatch
@@ -197,3 +230,6 @@ def add_anomaly_prediction_column(df, predictions, col_name='anomaly_prediction'
 #     .start()
 query = df.writeStream.foreachBatch(predict_anomalies).outputMode("update").start()
 query.awaitTermination()
+
+    
+    #v spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0 /sparkScripts/preprocessing.py
